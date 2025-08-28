@@ -1,0 +1,4 @@
+model_name_or_path: saves/internvl/lora/sft
+template: internvl
+infer_backend: huggingface  # choices: [huggingface, vllm, sglang]
+trust_remote_code: true
