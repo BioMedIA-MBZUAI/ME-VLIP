@@ -1,73 +1,105 @@
 
->A template README.md for code accompanying a Machine Learning-based MICCAI paper, which is built on [paperswithcode/releasing-research-code](https://github.com/paperswithcode/releasing-research-code).
->
->Dataset, preprocessing, and posting processing sections are added because these parts are very important to reproduce the results in medical image analysis community.
-
-This repository is the official implementation of [My Paper Title](TBA). 
-
->Optional: include a graphic explaining your approach/main result, bibtex entry, and link to demos, blog posts and tutorials
+This repository is the official implementation of [ME-VLIP: A Modular and Efficient Vision-Language Framework for Generalizable Medical Image Parsing]([TBA](https://openreview.net/forum?id=0LYAs4b8T6)). 
 
 ## Environments and Requirements
 
-- Windows/Ubuntu version
-- CPU, RAM, GPU information
-- CUDA version
-- python version
+| Component            | Setting                                                       |
+| :------------------- | :------------------------------------------------------------ |
+| System               | Ubuntu 22.04.4 LTS                                            |
+| Programming language | Python 3.10                                                   |
+| Dependencies         | torch 2.3.1, torchvision 0.18.1, transformers 4.52.dev0       |
+| GPU                  | 1x NVIDIA A100-SXM4                                           |
+| VRAM                 | 40GB                                                          |
+| CPU                  | 64 cores                                                      |
 
 To install requirements:
 
 ```setup
+cd docker_internvl
+conda create -n flare25-internvl python=3.10
+conda activate flare25-internvl
 pip install -r requirements.txt
 ```
-
->Describe how to set up the environment, e.g. pip/conda/docker commands, download datasets, etc...
-
 
 
 ## Dataset
 
-- A link to download the data (if publicly available)
-- A description of how to prepare the data (e.g., folder structures)
+- **Source:** [FLARE-MedFM/FLARE-Task5-MLLM-2D](https://huggingface.co/datasets/FLARE-MedFM/FLARE-Task5-MLLM-2D)
+- **Description:** 19 medical datasets, 8 imaging modalities, 50,996 images, 58,112 Q&A pairs
+- **Structure:**
+```
+original_dataset/
+├── training/
+├── validation-public/
+└── validation-hidden/
+```
+- **Download:**
+```bash
+huggingface-cli login
+huggingface-cli download FLARE-MedFM/FLARE-Task5-MLLM-2D --repo-type dataset --local-dir ./original_dataset
+find original_dataset -name "*.zip" -exec unzip -o "{}" -d "$(dirname "{}")" \;
+```
+
+---
 
 ## Preprocessing
 
-A brief description of the preprocessing method
+- **Purpose:**
+  - Prepare for LLaMA-Factory.
 
-- cropping
-- intensity normalization
-- resampling
-
-Running the data preprocessing code:
-
-```python
-python preprocessing.py --input_path <path_to_input_data> --output_path <path_to_output_data>
+- **Command:**
+```bash
+cd llama_factory_internvl/scripts
+python data_preparation.py
 ```
 
+---
 ## Training
 
-1. To train the model(s) in the paper, run this command:
+We follow the instructions of this repo: [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory)
+1. To fine-tune the model(s) in the paper, run this command:
 
 ```bash
-python train.py --input-data <path_to_data> --alpha 10 --beta 20
+cd llama_factory_internvl
+llamafactory-cli train examples/train_qlora/internvl_lora_sft_bnb.yaml
 ```
-
->Describe how to train the models, with example commands, including the full training procedure and appropriate hyper-parameters.
-
+| Component | Setting |
+| :--- | :--- |
+| **QLoRA fine-tuning** | |
+| Base model | InternVL3 [1] |
+| Number of parameters | 8B |
+| Framework | LLaMA-Factory [2] |
+| Method | QLoRA (4-bit quantization) |
+| LoRA rank | 8 |
+| LoRA target modules | q_proj, k_proj, v_proj, o_proj, up_proj, gate_proj, down_proj |
+| Fine-tuning approach | SFT |
+| Epochs | 3 |
+| Batch size (per device) | 2 |
+| Gradient accumulation | 4 steps |
+| Effective batch size | 8 |
+| Sequence length | 2048 tokens |
+| Optimizer | AdamW |
+| Precision | BF16 |
+| Learning rate schedule | Linear |
+| Initial learning rate | 2e-4 |
+| Warm-up ratio | 3% |
+| Training time | ~60 hours |
+| Inference VRAM | ~9GB |
+| Number of trainable parameters | ~20M |
+| **TC configurations** | |
+| Model | GLiClass [3] |
+| Encoder | DeBERTa-v3-small |
+| Label model | BGE-small |
+| Epochs | 3 |
+| Optimizer | AdamW |
+| Loss | Focal Loss (α=1, γ=1) |
+| Learning rate | 1e-5 |
+| Precision | FP16 (mixed) |
 You can download trained models here:
 
 - [My awesome model](https://drive.google.com/mymodel.pth) trained on the above dataset with the above code. 
 
 >Give a link to where/how the trained models can be downloaded.
-
-
-2. To fine-tune the model on a customized dataset, run this command:
-
-```bash
-python finetune.py --input-data <path_to_data> --pre_trained_model_path <path to pre-trained model> --other_flags
-```
-
-3. [Colab](https://colab.research.google.com/) jupyter notebook
-
 
 ## Inference
 
