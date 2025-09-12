@@ -1,5 +1,5 @@
 
-This repository is the official implementation of [ME-VLIP: A Modular and Efficient Vision-Language Framework for Generalizable Medical Image Parsing]([TBA](https://openreview.net/forum?id=0LYAs4b8T6)). 
+This repository is the official implementation of [ME-VLIP: A Modular and Efficient Vision-Language Framework for Generalizable Medical Image Parsing](https://openreview.net/forum?id=0LYAs4b8T6). 
 
 ## Environments and Requirements
 
@@ -45,7 +45,7 @@ find original_dataset -name "*.zip" -exec unzip -o "{}" -d "$(dirname "{}")" \;
 ## Preprocessing
 
 - **Purpose:**
-  - Prepare for LLaMA-Factory.
+  - Convert to a single JSON file for LLaMA-Factory.
 
 - **Command:**
 ```bash
@@ -63,9 +63,10 @@ We follow the instructions of this repo: [LLaMA-Factory](https://github.com/hiyo
 cd llama_factory_internvl
 llamafactory-cli train examples/train_qlora/internvl_lora_sft_bnb.yaml
 ```
+
+**QLoRA fine-tuning**
 | Component | Setting |
 | :--- | :--- |
-| **QLoRA fine-tuning** | |
 | Base model | InternVL3 [1] |
 | Number of parameters | 8B |
 | Framework | LLaMA-Factory [2] |
@@ -86,7 +87,10 @@ llamafactory-cli train examples/train_qlora/internvl_lora_sft_bnb.yaml
 | Training time | ~60 hours |
 | Inference VRAM | ~9GB |
 | Number of trainable parameters | ~20M |
-| **TC configurations** | |
+
+**TC configurations**
+| Component | Setting |
+| :--- | :--- |
 | Model | GLiClass [3] |
 | Encoder | DeBERTa-v3-small |
 | Label model | BGE-small |
@@ -95,28 +99,25 @@ llamafactory-cli train examples/train_qlora/internvl_lora_sft_bnb.yaml
 | Loss | Focal Loss (α=1, γ=1) |
 | Learning rate | 1e-5 |
 | Precision | FP16 (mixed) |
+
 You can download trained models here:
 
-- [My awesome model](https://drive.google.com/mymodel.pth) trained on the above dataset with the above code. 
-
->Give a link to where/how the trained models can be downloaded.
+- [InternVL3-8B](https://huggingface.co/AmalSaqib/flare-internvl) trained using the procedure explained above.
+- [GLiClass](https://huggingface.co/MaiAShaaban/flare-gliclass-small-v1.0) trained using the [GLiClass](https://github.com/Knowledgator/GLiClass) repo.
 
 ## Inference
 
 1. To infer the testing cases, run this command:
 
-```python
-python inference.py --input-data <path_to_data> --model_path <path_to_trained_model> --output_path <path_to_output_data>
+```
+cd docker_internvl
+python inference.py --base_dataset_path <path to test dataset> --output_dir <path to output folder> --output_filename predictions.json --max_new_tokens 512 --device cuda:0
 ```
 
-> Describe how to infer testing cases with the trained models.
-
-2. [Colab](https://colab.research.google.com/) jupyter notebook
-
-3. Docker containers on [DockerHub](https://hub.docker.com/)
+2. Docker containers on [DockerHub](https://hub.docker.com/r/maiahmed95/biomedia/)
 
 ```bash
-docker container run --gpus "device=0" -m 28G --name algorithm --rm -v $PWD/CellSeg_Test/:/workspace/inputs/ -v $PWD/algorithm_results/:/workspace/outputs/ algorithm:latest /bin/bash -c "sh predict.sh"
+docker container run --gpus "device=0" -m 28G --name biomedia --rm -v $PWD/FLARE_Test/:/workspace/inputs/ -v $PWD/biomedia_outputs/:/workspace/outputs/ biomedia:latest /bin/bash -c "sh predict.sh"
 ```
 
 ## Evaluation
@@ -124,27 +125,48 @@ docker container run --gpus "device=0" -m 28G --name algorithm --rm -v $PWD/Cell
 To compute the evaluation metrics, run:
 
 ```eval
-python eval.py --seg_data <path_to_inference_results> --gt_data <path_to_ground_truth>
+cd evaluation
+python evaluation.py --base_dataset_path <path>/original_dataset --prediction_file predictions.json --output_dir evaluation_results --output_filename metrics_predictions.json
 ```
-
->Describe how to evaluate the inference results and obtain the reported results in the paper.
-
 
 
 ## Results
 
-Our method achieves the following performance on [Brain Tumor Segmentation (BraTS) Challenge](https://www.med.upenn.edu/cbica/brats2020/)
+Model performance comparison on validation sets (Public | Hidden scores).
 
-| Model name       |  DICE  | 95% Hausdorff Distance |
-| ---------------- | :----: | :--------------------: |
-| My awesome model | 90.68% |         32.71          |
+| Task & Metric                | InternVL3-8B | InternVL3-8B (w/ TC) |
+| :-------------------------- | :------------------- | :--------------------------- |
+| **Classification**          |                      |                              |
+| Balanced Accuracy ↑         | 0.52 \| 0.71         | 0.53 \| 0.74                 |
+| **Multi-label Classification** |                  |                              |
+| F1 Score ↑                  | 0.46 \| 0.56         | 0.46 \| 0.57                 |
+| **Detection**               |                      |                              |
+| F1 Score ↑                  | 0.37 \| 0.82         | 0.26 \| 0.82                 |
+| **Instance Detection**      |                      |                              |
+| F1 Score ↑                  | - \| 0.00            | - \| 0.00                    |
+| **Cell Counting**           |                      |                              |
+| MAE ↓                       | 301.4 \| -           | 251.6 \| -                   |
+| **Regression**              |                      |                              |
+| MAE ↓                       | - \| 18.67           | - \| 11.84                   |
+| **Report Generation**       |                      |                              |
+| GREEN Score ↑               | 0.75 \| -            | 0.71 \| -                    |
 
->Include a table of results from your paper, and link back to the leaderboard for clarity and context. If your main result is a figure, include that figure and link to the command or notebook to reproduce it. 
-
+## Citation
+```bibtex
+@inproceedings{
+shaaban2025mevlip,
+title={{ME}-{VLIP}: A Modular and Efficient Vision-Language Framework for Generalizable Medical Image Parsing},
+author={Mai A. Shaaban and Amal Saqib and Shahad Emad Hardan and Darya Taratynova and Tausifa Jan Saleem and Mohammad Yaqub},
+booktitle={Submitted to MICCAI 2025 FLARE Challenge},
+year={2025},
+url={https://openreview.net/forum?id=0LYAs4b8T6},
+note={under review}
+}
+```
 
 ## Contributing
 
->Pick a license and describe how to contribute to your code repository. 
+This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/BioMedIA-MBZUAI/FLARE2025-Task5-2D-biomedia/blob/main/LICENSE) file for details.
 
 ## Acknowledgement
 
