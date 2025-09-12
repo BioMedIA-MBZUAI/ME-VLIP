@@ -166,7 +166,7 @@ note={under review}
 
 ## Contributing
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/BioMedIA-MBZUAI/FLARE2025-Task5-2D-biomedia/blob/main/LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/BioMedIA-MBZUAI/ME-VLIP/blob/main/LICENSE) file for details.
 
 ## Acknowledgement
 
