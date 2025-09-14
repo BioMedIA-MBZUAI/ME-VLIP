@@ -1,20 +1,12 @@
 {
   "flare_dataset": {
-  "file_name": "converted.json",
-  "formatting": "sharegpt",
-  "columns": {
-    "messages": "conversations",
-    "images": "images"
-  }
-},
-  "internvl": {
     "file_name": "internvl_train.jsonl",
     "formatting": "sharegpt",
     "columns": {
       "messages": "conversations",
       "images": "images"
     }
-  },
+},
   "identity": {
     "file_name": "identity.json"
   },
