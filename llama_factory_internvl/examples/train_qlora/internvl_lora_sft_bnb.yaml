@@ -1,6 +1,6 @@
 # File: examples/train_qlora/internvl_lora_sft_bnb.yaml
 
-model_name_or_path: OpenGVLab/InternVL3-8B
+model_name_or_path: OpenGVLab/InternVL3-8B-hf
 quantization_bit: 4
 quantization_method: bnb
 double_quantization: false
