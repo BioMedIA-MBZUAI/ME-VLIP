@@ -1,44 +1,49 @@
-import csv
+import pandas as pd
 import json
-import ast
+import os
+from ast import literal_eval
 from pathlib import Path
 
-input_csv = "/path/to/training.csv"
-output_json = "llama_factory_internvl/data/converted.json"
-output = []
+# Config
+DATASET_PATH = "/path/to/training.csv"
+OUTPUT_PATH = "llama_factory_internvl/data/internvl_train.jsonl"
 
-with open(input_csv, newline='') as csvfile:
-    reader = csv.reader(csvfile)
-    for row in reader:
-        # Parse fields
-        # TaskType,Modality,ImageName,Question,Answer,Split,FileName,DirectoryPath
-        type, modality, images_str, question, answer, _,_, base_path = row
+# Load CSV
+df = pd.read_csv(DATASET_PATH)
 
-        # Step 1: Parse the list of images safely
-        try:
-            image_list = ast.literal_eval(images_str)
-        except Exception as e:
-            print("❌ Could not parse image list:", images_str)
-            continue
+# Parse image list column
+df["ImageName"] = df["ImageName"].apply(literal_eval)  # Convert string list to list
 
-        # Step 2: Prepend full path
-        full_image_paths = [str(Path(base_path) / image) for image in image_list]
+# Explode to one row per image
+df_exploded = df.explode("ImageName")
 
-        # Step 3: Add matching <image> tokens
-        image_tokens = " ".join(["<image>"] * len(full_image_paths))
-        full_question = f"{image_tokens} {question.strip()}"
+# Full image path
+df_exploded["FullImagePath"] = df_exploded.apply(
+    lambda row: os.path.join(row["DirectoryPath"], row["ImageName"]), axis=1
+)
 
-        # Step 4: Add to final JSON structure
-        output.append({
-            "conversations": [
-                {"from": "human", "value": full_question},
-                {"from": "gpt", "value": answer.strip()}
-            ],
-            "images": full_image_paths
-        })
+# Filter out missing image files
+df_exploded = df_exploded[df_exploded["FullImagePath"].apply(os.path.exists)].reset_index(drop=True)
 
-# Write JSON
-with open(output_json, "w") as f:
-    json.dump(output, f, indent=2)
+# Convert to JSONL
+records = []
+for _, row in df_exploded.iterrows():
+    prompt = f"<image> {row['Question']}"
+    response = row["Answer"]
 
-print(f"✅ JSON saved to {output_json} with {len(output)} entries.")
+    record = {
+        "conversations": [
+            {"from": "human", "value": prompt},
+            {"from": "gpt", "value": response}
+        ],
+        "images": [row["FullImagePath"]]
+    }
+    records.append(record)
+
+# Write JSONL
+with open(OUTPUT_PATH, 'w') as f:
+    for r in records:
+        f.write(json.dumps(r) + '\n')
+
+print(f"✅ Done! Wrote {len(records)} single-image examples to: {OUTPUT_PATH}")
+
