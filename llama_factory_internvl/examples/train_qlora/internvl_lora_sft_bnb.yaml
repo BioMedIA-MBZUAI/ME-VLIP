@@ -1,6 +1,6 @@
 # File: examples/train_qlora/internvl_lora_sft_bnb.yaml
 
-model_name_or_path: OpenGVLab/InternVL3-8B-hf
+model_name_or_path: OpenGVLab/InternVL3-8B
 quantization_bit: 4
 quantization_method: bnb
 double_quantization: false
@@ -15,7 +15,7 @@ lora_rank: 8
 lora_target: all
 
 ### dataset
-dataset: internvl
+dataset: flare_dataset
 template: intern_vl
 cutoff_len: 2048
 overwrite_cache: true
